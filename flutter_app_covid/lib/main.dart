@@ -43,7 +43,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> getData() async {
     log("getData called");
 
-    //get url.
+    //get url. : covid-19
     var url = "https://covid19.th-stat.com/api/open/today";
     var response = await http.get(url);
     log(response.body);
