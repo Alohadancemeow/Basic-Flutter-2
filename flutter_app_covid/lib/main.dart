@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_app_covid/result.dart';
+import 'package:flutter_app_covid/stat_box.dart';
 import 'package:http/http.dart' as http;
 
 void main() {
@@ -28,19 +29,18 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  //ตัวแปรฟิลด์
-  Result _resultFromWebAPI;
-
   //init จะถูกเรียกใช้ครั้งแรกและครั้งเดียว เมื่อเปิดแอป.
   //ฉะนั้นจึงให้มันเรียกใช้งาน getData() ก่อนจะเข้าหน้าแอป.
   @override
   void initState() {
     super.initState();
     log("initState called");
+
+    //call getData
     getData();
   }
 
-  Future<void> getData() async {
+  Future<Result> getData() async {
     log("getData called");
 
     //get url. : covid-19
@@ -48,44 +48,77 @@ class _MyHomePageState extends State<MyHomePage> {
     var response = await http.get(url);
     log(response.body);
 
-    setState(() {
-      //ส่งไปจำแนก
-      //แล้วเก็บลงที่ตัวแปร
-      _resultFromWebAPI = resultFromJson(response.body);
-    });
+    // setState(() {
+    //   //ส่งไปจำแนก
+    //   //แล้วเก็บลงที่ตัวแปร
+    //   _resultFromWebAPI = resultFromJson(response.body);
+    // });
+
+    var result = resultFromJson(response.body);
+    return result;
   }
 
   @override
   Widget build(BuildContext context) {
     log("Build called");
+
     return Scaffold(
-        appBar: AppBar(
-          title: Text("Covid-19 : Today"),
-        ),
-        //ListView
-        body: ListView(
-          children: [
-            ListTile(
-              title: Text(
-                "ผู้ติดเชื้อสะสม",
-                style: TextStyle(fontSize: 20, color: Colors.brown),
+      appBar: AppBar(
+        title: Text("Covid-19 : Today"),
+      ),
+      //รอรับข้อมูล Future
+      body: FutureBuilder(
+        future: getData(),
+        builder: (BuildContext context, AsyncSnapshot<Result> snapshot) {
+          //check connectionState
+          if (snapshot.connectionState == ConnectionState.done) {
+            log("Done");
+            //get Data from snapshot
+            var resultData = snapshot.data;
+            return Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                children: [
+                  //use statBox
+                  StatBox(
+                    title: "ผู้ติดเชื้อสะสม",
+                    total: resultData?.confirmed,
+                    backgroundColor: Colors.red,
+                  ),
+                  //กำหนดระยะห่างระหว่างกล่อง
+                  SizedBox(
+                    height: 10,
+                  ),
+                  StatBox(
+                    title: "หายแล้ว",
+                    total: resultData?.recovered,
+                    backgroundColor: Colors.green,
+                  ),
+                  SizedBox(
+                    height: 10,
+                  ),
+                  StatBox(
+                    title: "รักษาอยู่",
+                    total: resultData?.hospitalized,
+                    backgroundColor: Colors.blue,
+                  ),
+                  SizedBox(
+                    height: 10,
+                  ),
+                  StatBox(
+                    title: "เสียชีวิต",
+                    total: resultData?.deaths,
+                    backgroundColor: Colors.grey,
+                  ),
+                ],
               ),
-              subtitle: Text("${_resultFromWebAPI?.confirmed ?? "0"}"),
-              // ?? = ถ้าหากข้อมูลเป็น null ให้แทนด้วย 0
-            ),
-            ListTile(
-              title: Text("หายแล้ว"),
-              subtitle: Text("${_resultFromWebAPI?.recovered ?? "0"}"),
-            ),
-            ListTile(
-              title: Text("รักษาอยู่"),
-              subtitle: Text("${_resultFromWebAPI?.hospitalized ?? "0"}"),
-            ),
-            ListTile(
-              title: Text("เสียชีวิต"),
-              subtitle: Text("${_resultFromWebAPI?.deaths ?? "0"}"),
-            )
-          ],
-        ));
+            );
+          } else {
+            log("Waitting..");
+            return LinearProgressIndicator();
+          }
+        },
+      ),
+    );
   }
 }
